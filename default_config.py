@@ -8,7 +8,7 @@ SQLALCHEMY_DATABASE_URI = "postgresql://critiquebrainz:critiquebrainz@db:5432/cr
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # Redis
-REDIS_HOST = "critiquebrainz-redis"
+REDIS_HOST = "critiquebrainz_redis"
 REDIS_PORT = 6379
 REDIS_NAMESPACE = "CB"
 
@@ -58,5 +58,5 @@ MUSICBRAINZ_CLIENT_SECRET = ""
 
 # mbspotify
 # https://github.com/metabrainz/mbspotify
-MBSPOTIFY_BASE_URI = "http://mbspotify.musicbrainz.org/"
+MBSPOTIFY_BASE_URI = "https://mbspotify.musicbrainz.org/"
 MBSPOTIFY_ACCESS_KEY = None
