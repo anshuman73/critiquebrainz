@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ _('Moderators') }} - CritiqueBrainz{% endblock %}
+
+{% block content %}
+  <div id="moderators-list">
+    <h2>{{ _('Moderators') }}</h2>
+    <p><em>{{ _('These users respond to reports and make sure that spammers don\'t spam.') }}</em></p>
+    <ul>
+    {% for mod in moderators %}
+      <li>
+        <img src="{{ mod['avatar_url'] }}" class="avatar" />
+        {% if mod['critiquebrainz_id'] %}
+          <a href="{{ url_for('user.info', user_id=mod['critiquebrainz_id']) }}">
+            {{ mod['musicbrainz_username'] }}
+          </a>
+        {% else %}
+          {{ mod['musicbrainz_username'] }}
+        {% endif %}
+      </li>
+    {% endfor %}
+    </ul>
+  </div>
+{% endblock %}
