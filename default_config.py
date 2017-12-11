@@ -7,6 +7,9 @@ SECRET_KEY = "CHANGE_THIS"
 SQLALCHEMY_DATABASE_URI = "postgresql://critiquebrainz:critiquebrainz@db:5432/critiquebrainz"
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+# MusicBrainz Database
+MB_DATABASE_URI = "postgresql://musicbrainz:musicbrainz@musicbrainz_db:5432/musicbrainz_db"
+
 # Redis
 REDIS_HOST = "critiquebrainz_redis"
 REDIS_PORT = 6379
@@ -35,6 +38,7 @@ SUPPORTED_LANGUAGES = [
     'fr',  # French
     'de',  # German
     'it',  # Italian
+    'nb',  # Norwegian Bokmål
     'pl',  # Polish
     'es',  # Spanish
     'sv',  # Swedish
@@ -55,6 +59,10 @@ MUSICBRAINZ_HOSTNAME = None
 MUSICBRAINZ_USERAGENT = "CritiqueBrainz"
 MUSICBRAINZ_CLIENT_ID = ""
 MUSICBRAINZ_CLIENT_SECRET = ""
+
+# Spotify
+SPOTIFY_CLIENT_ID = ""
+SPOTIFY_CLIENT_SECRET = ""
 
 # mbspotify
 # https://github.com/metabrainz/mbspotify

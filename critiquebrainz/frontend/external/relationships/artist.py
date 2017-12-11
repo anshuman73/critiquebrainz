@@ -1,16 +1,16 @@
 """
 Relationship processor for artist entity.
 """
-from flask_babel import lazy_gettext
 import urllib.parse
+from flask_babel import lazy_gettext
 
 
 def process(artist):
     """Handles processing supported relation lists."""
-    if 'artist-relation-list' in artist and artist['artist-relation-list']:
-        artist['band-members'] = _artist(artist['artist-relation-list'])
-    if 'url-relation-list' in artist and artist['url-relation-list']:
-        artist['external-urls'] = _url(artist['url-relation-list'])
+    if 'artist-rels' in artist and artist['artist-rels']:
+        artist['band-members'] = _artist(artist['artist-rels'])
+    if 'url-rels' in artist and artist['url-rels']:
+        artist['external-urls'] = _url(artist['url-rels'])
     return artist
 
 
@@ -52,8 +52,11 @@ def _url(url_list):
                     external_urls.append(dict(
                         relation.items() + {
                             'name': lazy_gettext('Wikipedia'),
-                            'disambiguation': target.netloc.split('.')[0] + ':' +
-                                              urllib.parse.unquote(target.path.split('/')[2]).decode('utf8').replace("_", " "),
+                            'disambiguation': (
+                                target.netloc.split('.')[0] +
+                                ':' +
+                                urllib.parse.unquote(target.path.split('/')[2]).decode('utf8').replace("_", " ")
+                            ),
                             'icon': 'wikipedia-16.png',
                         }.items()))
                 elif relation['type'] == 'youtube':
@@ -79,7 +82,7 @@ def _url(url_list):
                 else:
                     # TODO(roman): Process other types here
                     pass
-            except Exception as e:  # FIXME(roman): Too broad exception clause.
+            except Exception:  # FIXME(roman): Too broad exception clause.
                 # TODO(roman): Log error.
                 pass
 

@@ -1,12 +1,11 @@
-﻿from werkzeug.serving import run_simple
+﻿import subprocess
+from werkzeug.serving import run_simple
 from werkzeug.wsgi import DispatcherMiddleware
-from critiquebrainz import frontend
-from critiquebrainz import ws
 from brainzutils import cache
+from critiquebrainz import frontend, ws
 from critiquebrainz.data import dump_manager
 import critiquebrainz.data.utils as data_utils
 import critiquebrainz.data.fixtures as _fixtures
-import subprocess
 import click
 
 
@@ -102,13 +101,13 @@ def init_db(skip_create_db=False):
         create_extension(db_uri)
 
     click.echo("Creating tables... ", nl=False)
-    data_utils.create_tables(frontend.create_app())
+    data_utils.create_all()
     click.echo("Done!")
 
     click.echo("Adding fixtures... ")
     app = frontend.create_app()
     with app.app_context():
-        _fixtures.install(app, *_fixtures.all_data)
+        _fixtures.install(*_fixtures.all_data)
     click.echo("Done!")
 
     click.echo("Initialization has been completed!")
@@ -119,14 +118,21 @@ def init_postgres(db_uri):
 
     New user and database will be created, if needed. It also creates uuid-ossp extension.
     """
-    hostname, port, db, username, password = data_utils.explode_db_uri(db_uri)
+    hostname, port, db, username, password = data_utils.explode_db_uri(db_uri)  # pylint: disable=unused-variable
     if hostname not in ['localhost', '127.0.0.1']:
         raise Exception('Cannot configure a remote database')
 
     # Checking if user already exists
-    retv = subprocess.check_output('sudo -u postgres psql -t -A -c "SELECT COUNT(*) FROM pg_user WHERE usename = \'%s\';"' % username, shell=True)
-    if retv[0] == '0':
-        exit_code = subprocess.call('sudo -u postgres psql -c "CREATE ROLE %s PASSWORD \'%s\' NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT LOGIN;"' % (username, password), shell=True)
+    retv = subprocess.check_output('sudo -u postgres psql -t -A -c'
+                                   '"SELECT COUNT(*) FROM pg_user WHERE usename = \'%s\';"' %
+                                   username, shell=True)
+    if retv == '0':
+        exit_code = subprocess.call(
+            'sudo -u postgres psql -c '
+            '"CREATE ROLE %s PASSWORD \'%s\' NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT LOGIN;"' %
+            (username, password),
+            shell=True,
+        )
         if exit_code != 0:
             raise Exception('Failed to create PostgreSQL user!')
 
@@ -141,7 +147,11 @@ def init_postgres(db_uri):
 def create_extension(db_uri):
     host, port, db, username, password = data_utils.explode_db_uri(db_uri)
     psql_cmd = "psql -h %s -p %s -U %s -W %s %s" % (host, port, username, password, db)
-    exit_code = subprocess.call('%s  -t -A -c "CREATE EXTENSION IF NOT EXISTS \\"%s\\";" %s' % (psql_cmd, 'uuid-ossp', db), shell=True)
+    exit_code = subprocess.call(
+        '%s  -t -A -c "CREATE EXTENSION IF NOT EXISTS \\"%s\\";" %s' %
+        (psql_cmd, 'uuid-ossp', db),
+        shell=True,
+    )
     if exit_code != 0:
         raise Exception('Failed to create PostgreSQL extension!')
 

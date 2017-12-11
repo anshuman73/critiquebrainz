@@ -6,16 +6,17 @@ Spotify. These mappings are then used to show embedded Spotify player on some
 pages. See https://github.com/metabrainz/mbspotify for more info about this
 project.
 """
-from flask import Blueprint, render_template, request, url_for, redirect
-from flask_login import login_required, current_user
-from flask_babel import gettext
-from werkzeug.exceptions import NotFound, BadRequest
-import critiquebrainz.frontend.external.spotify as spotify_api
-from critiquebrainz.frontend.external import musicbrainz, mbspotify
-from critiquebrainz.frontend import flash
 import urllib.parse
 import os.path
 import string
+from flask import Blueprint, render_template, request, url_for, redirect
+from flask_login import login_required, current_user
+from flask_babel import gettext
+from werkzeug.exceptions import NotFound, BadRequest, ServiceUnavailable
+import critiquebrainz.frontend.external.spotify as spotify_api
+from critiquebrainz.frontend.external.exceptions import ExternalServiceException
+from critiquebrainz.frontend.external import musicbrainz, mbspotify
+from critiquebrainz.frontend import flash
 
 mapping_bp = Blueprint('mapping', __name__)
 
@@ -30,8 +31,11 @@ def spotify_list(release_group_id):
     for mapping in spotify_mappings:
         spotify_ids.append(mapping[14:])
 
-    if len(spotify_ids) > 0:
-        spotify_albums = spotify_api.get_multiple_albums(spotify_ids)
+    if spotify_ids:
+        try:
+            spotify_albums = spotify_api.get_multiple_albums(spotify_ids)
+        except ExternalServiceException as e:
+            raise ServiceUnavailable(e)
     else:
         spotify_albums = []
     release_group = musicbrainz.get_release_group_by_id(release_group_id)
@@ -62,15 +66,20 @@ def spotify():
     punctuation_map = dict((ord(char), None) for char in string.punctuation)
     query = release_group['title'].translate(punctuation_map)
     # Searching...
-    response = spotify_api.search(query, 'album', limit, offset).get('albums')
+    try:
+        response = spotify_api.search(query, item_types='album', limit=limit, offset=offset).get('albums')
+    except ExternalServiceException as e:
+        raise ServiceUnavailable(e)
 
     albums_ids = [x['id'] for x in response['items']]
-    full_response = spotify_api.get_multiple_albums(albums_ids)
+    try:
+        full_response = spotify_api.get_multiple_albums(albums_ids)
+    except ExternalServiceException as e:
+        raise ServiceUnavailable(e)
 
-    return render_template(
-            'mapping/spotify.html', release_group=release_group,
-            search_results=[full_response[id] for id in albums_ids if id in full_response],
-            page=page, limit=limit, count=response.get('total'))
+    return render_template('mapping/spotify.html', release_group=release_group,
+                           search_results=[full_response[id] for id in albums_ids if id in full_response],
+                           page=page, limit=limit, count=response.get('total'))
 
 
 @mapping_bp.route('/spotify/confirm', methods=['GET', 'POST'])
@@ -95,8 +104,9 @@ def spotify_confirm():
         flash.error(gettext("You need to specify a correct link to this album on Spotify!"))
         return redirect(url_for('.spotify', release_group_id=release_group_id))
 
-    album = spotify_api.get_album(spotify_id)
-    if not album or album.get('error'):
+    try:
+        album = spotify_api.get_album(spotify_id)
+    except ExternalServiceException:
         flash.error(gettext("You need to specify existing album from Spotify!"))
         return redirect(url_for('.spotify', release_group_id=release_group_id))
 
@@ -128,7 +138,7 @@ def spotify_report():
 
     # Checking if release group is mapped to Spotify
     spotify_mappings = mbspotify.mappings(str(release_group_id))
-    if not (spotify_uri in spotify_mappings):
+    if spotify_uri not in spotify_mappings:
         flash.error(gettext("This album is not mapped to Spotify yet!"))
         return redirect(url_for('.spotify_list', release_group_id=release_group_id))
 
@@ -137,13 +147,13 @@ def spotify_report():
         flash.success(gettext("Incorrect Spotify mapping has been reported. Thank you!"))
         return redirect(url_for('.spotify_list', release_group_id=release_group_id))
 
-    else:
+    try:
         album = spotify_api.get_album(spotify_id)
-        if not album or album.get('error'):
-            flash.error(gettext("You need to specify existing album from Spotify!"))
-            return redirect(url_for('.spotify_list', release_group_id=release_group_id))
+    except ExternalServiceException:
+        flash.error(gettext("You need to specify existing album from Spotify!"))
+        return redirect(url_for('.spotify_list', release_group_id=release_group_id))
 
-        return render_template('mapping/report.html', release_group=release_group, spotify_album=album)
+    return render_template('mapping/report.html', release_group=release_group, spotify_album=album)
 
 
 def parse_spotify_id(spotify_ref):
@@ -158,7 +168,7 @@ def parse_spotify_id(spotify_ref):
         return spotify_ref[14:]
 
     # Link to Spotify
-    # TODO(roman): Improve checking there. See https://bitbucket.org/metabrainz/critiquebrainz/pull-request/167/cb-115-support-for-different-types-of/activity#comment-2757329
+    # TODO(roman): Improve checking there.
     if spotify_ref.startswith('http://') or spotify_ref.startswith('https://'):
         if spotify_ref.endswith('/'):
             spotify_ref = spotify_ref[:-1]

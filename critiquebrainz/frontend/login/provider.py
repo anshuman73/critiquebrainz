@@ -2,7 +2,8 @@ import json
 from rauth import OAuth2Service
 from flask import request, session, url_for
 
-from critiquebrainz.data.model.user import User
+from critiquebrainz.db.user import User
+import critiquebrainz.db.users as db_users
 from critiquebrainz.utils import generate_string
 
 
@@ -36,8 +37,7 @@ class BaseAuthentication(object):
         """Fetch data from session."""
         if self._session_key not in session:
             return None
-        else:
-            return session[self._session_key].get(key, default)
+        return session[self._session_key].get(key, default)
 
     def __init__(self, name, service, session_key):
         self._name = name
@@ -46,7 +46,7 @@ class BaseAuthentication(object):
 
 
 class MusicBrainzAuthentication(BaseAuthentication):
-  
+
     def get_authentication_uri(self, **kwargs):
         csrf = generate_string(20)
         self.persist_data(csrf=csrf)
@@ -65,7 +65,9 @@ class MusicBrainzAuthentication(BaseAuthentication):
             decoder=lambda content: json.loads(content.decode("utf-8")),
         )
         data = s.get('oauth2/userinfo').json()
-        return User.get_or_create(data.get('sub'), musicbrainz_id=data.get('sub'))
+        return User(db_users.get_or_create(data.get('sub'), new_user_data={
+            "display_name": data.get('sub'),
+        }))
 
     def validate_post_login(self):
         if request.args.get('error'):

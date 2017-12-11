@@ -1,8 +1,10 @@
 from flask import Blueprint, jsonify, request, redirect, url_for
-from critiquebrainz.data.model.user import User
+from critiquebrainz.db.user import User
+from critiquebrainz.db import users as db_users
 from critiquebrainz.decorators import crossdomain
 from critiquebrainz.ws.oauth import oauth
 from critiquebrainz.ws.parser import Parser
+from critiquebrainz.ws.exceptions import NotFound
 
 user_bp = Blueprint('ws_user', __name__)
 
@@ -33,7 +35,7 @@ def user_me_handler(user):
             "user_type": "Noob",
             "email": "your_email_id",
             "karma": 0,
-            "musicbrainz_id": "username/id associated with musicbrainz",
+            "musicbrainz_username": "username/id associated with musicbrainz",
             "id": "your-unique-user-id",
             "avatar": "https:\/\/gravatar.com\/your-gravatar-link"
           }
@@ -221,9 +223,11 @@ def user_entity_handler(user_id):
 
     :resheader Content-Type: *application/json*
     """
-    user = User.query.get_or_404(str(user_id))
+    user = db_users.get_by_id(str(user_id))
+    if not user:
+        raise NotFound("Can't find a user with ID: {user_id}".format(user_id=user_id))
     inc = Parser.list('uri', 'inc', User.allowed_includes, optional=True) or []
-    return jsonify(user=user.to_dict(inc))
+    return jsonify(user=User(user).to_dict(inc))
 
 
 @user_bp.route('/', methods=['GET'])
@@ -282,6 +286,7 @@ def review_list_handler():
         return limit, offset
 
     limit, offset = fetch_params()
-    users, count = User.list(limit, offset)
-    return jsonify(limit=limit, offset=offset, count=count,
+    users = db_users.list_users(limit, offset)
+    users = [User(user) for user in users]
+    return jsonify(limit=limit, offset=offset, count=len(users),
                    users=[p.to_dict() for p in users])

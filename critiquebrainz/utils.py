@@ -1,10 +1,10 @@
-from flask import request
-from flask_uuid import UUID_RE
-from flask_babel import format_datetime, format_date
 import difflib
 import urllib.parse
 import string
 import random
+from flask import request
+from flask_uuid import UUID_RE
+from flask_babel import format_datetime, format_date
 
 tags = {'+': ('<ins>', '</ins>'), '-': ('<del>', '</del>'), ' ': (' ', '')}
 
@@ -84,6 +84,10 @@ def side_by_side_diff(old, new):
     prev_start, prev_end = None, ''
     prev_item = ''
 
+    if old is None:
+        old = ''
+    if new is None:
+        new = ''
     for item in difflib.ndiff(old.split(), new.split()):
         tag = tags.get(item[0])
 

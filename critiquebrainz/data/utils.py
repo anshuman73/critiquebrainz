@@ -1,5 +1,3 @@
-from critiquebrainz.data import db
-from sqlalchemy import create_engine
 import urllib.parse
 import unicodedata
 import shutil
@@ -7,12 +5,26 @@ import errno
 import sys
 import os
 import re
+from critiquebrainz import db
+
+ADMIN_SQL_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..', 'admin', 'sql')
 
 
-def create_tables(app):
-    engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'], client_encoding='utf8')
-    db.metadata.create_all(engine)
-    return engine
+def create_all():
+    db.run_sql_script(os.path.join(ADMIN_SQL_DIR, 'create_extensions.sql'))
+    db.run_sql_script(os.path.join(ADMIN_SQL_DIR, 'create_types.sql'))
+    db.run_sql_script(os.path.join(ADMIN_SQL_DIR, 'create_tables.sql'))
+    db.run_sql_script(os.path.join(ADMIN_SQL_DIR, 'create_primary_keys.sql'))
+    db.run_sql_script(os.path.join(ADMIN_SQL_DIR, 'create_foreign_keys.sql'))
+    db.run_sql_script(os.path.join(ADMIN_SQL_DIR, 'create_indexes.sql'))
+
+
+def drop_tables():
+    db.run_sql_script(os.path.join(ADMIN_SQL_DIR, 'drop_tables.sql'))
+
+
+def drop_types():
+    db.run_sql_script(os.path.join(ADMIN_SQL_DIR, 'drop_types.sql'))
 
 
 def explode_db_uri(uri):
@@ -60,7 +72,7 @@ def remove_old_archives(location, pattern, is_dir=False, sort_key=None):
     """
     entries = [os.path.join(location, e) for e in os.listdir(location)]
     pattern = re.compile(pattern)
-    entries = filter(lambda x: pattern.search(x), entries)
+    entries = filter(pattern.search, entries)
 
     if is_dir:
         entries = filter(os.path.isdir, entries)

@@ -1,14 +1,14 @@
 """
 Relationship processor for release group entity.
 """
-from flask_babel import lazy_gettext
 import urllib.parse
+from flask_babel import lazy_gettext
 
 
 def process(release_group):
     """Handles processing supported relation lists."""
-    if 'url-relation-list' in release_group and release_group['url-relation-list']:
-        release_group['external-urls'] = _url(release_group['url-relation-list'])
+    if 'url-rels' in release_group and release_group['url-rels']:
+        release_group['external-urls'] = _url(release_group['url-rels'])
     return release_group
 
 
@@ -27,7 +27,7 @@ def _url(url_list):
             external_urls.append(dict(list(relation.items()) + list(basic_types[relation['type']].items())))
         else:
             try:
-                target = urllib.parse.urlparse(relation['target'])
+                target = urllib.parse.urlparse(relation['url']['url'])
                 if relation['type'] == 'lyrics':
                     external_urls.append(dict(
                         relation.items() + {
@@ -38,14 +38,17 @@ def _url(url_list):
                     external_urls.append(dict(
                         relation.items() + {
                             'name': lazy_gettext('Wikipedia'),
-                            'disambiguation': target.netloc.split('.')[0] + ':' +
-                                              urllib.unquote(target.path.split('/')[2]).decode('utf8').replace("_", " "),
+                            'disambiguation': (
+                                target.netloc.split('.')[0] +
+                                ':' +
+                                urllib.parse.unquote(target.path.split('/')[2]).decode('utf8').replace("_", " "),
+                            ),
                             'icon': 'wikipedia-16.png',
                         }.items()))
                 else:
                     # TODO(roman): Process other types here
                     pass
-            except Exception as e:  # FIXME(roman): Too broad exception clause.
+            except Exception:  # FIXME(roman): Too broad exception clause.
                 # TODO(roman): Log error.
                 pass
 

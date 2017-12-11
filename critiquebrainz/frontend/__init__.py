@@ -1,6 +1,6 @@
-from brainzutils.flask import CustomFlask
 import logging
 import os
+from brainzutils.flask import CustomFlask
 from flask import send_from_directory
 
 
@@ -46,11 +46,12 @@ def create_app(debug=None, config_path=None):
     # Database
     from critiquebrainz.db import init_db_engine
     init_db_engine(app.config.get("SQLALCHEMY_DATABASE_URI"))
-    # TODO(roman): Remove these after ORM is gone:
-    from critiquebrainz.data import db
-    db.init_app(app)
 
     add_robots(app)
+
+    # MusicBrainz Database
+    from critiquebrainz.frontend.external import musicbrainz_db
+    musicbrainz_db.init_db_engine(app.config.get('MB_DATABASE_URI'))
 
     # Redis (cache)
     from brainzutils import cache
@@ -93,11 +94,12 @@ def create_app(debug=None, config_path=None):
     # Template utilities
     app.jinja_env.add_extension('jinja2.ext.do')
     from critiquebrainz.utils import reformat_date, reformat_datetime, track_length, parameterize
+    from critiquebrainz.frontend.external.musicbrainz_db.entities import get_entity_by_id
     app.jinja_env.filters['date'] = reformat_date
     app.jinja_env.filters['datetime'] = reformat_datetime
     app.jinja_env.filters['track_length'] = track_length
     app.jinja_env.filters['parameterize'] = parameterize
-    app.jinja_env.filters['entity_details'] = musicbrainz.get_entity_by_id
+    app.jinja_env.filters['entity_details'] = get_entity_by_id
     from flask_babel import Locale, get_locale
     app.jinja_env.filters['language_name'] = lambda language_code: Locale(language_code).get_language_name(get_locale())
     app.context_processor(lambda: dict(get_static_path=static_manager.get_static_path))
@@ -143,6 +145,7 @@ def create_app(debug=None, config_path=None):
 
 
 def add_robots(app):
+
     @app.route('/robots.txt')
-    def robots_txt():
+    def robots_txt():  # pylint: disable=unused-variable
         return send_from_directory(app.static_folder, 'robots.txt')

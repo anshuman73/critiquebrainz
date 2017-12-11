@@ -5,14 +5,18 @@
     {{- range $index, $element := (key (printf "docker-server-configs/CB/config.%s.json/%s" (env "DEPLOY_ENV") .) | parseJSON) -}}
         "{{.}}",
     {{- end -}}
-{{- end -}}
+{{- end }}
+
+import os
 
 SECRET_KEY = '''{{template "KEY" "secret_key"}}'''
 
 LOG_SENTRY = {
-    'dsn': '''{{template "KEY" "sentry_dsn_private"}}''',
+    'dsn': '''{{template "KEY" "sentry/dsn_private"}}''',
+    'environment': '''{{template "KEY" "sentry/environment"}}''',
+    'release': os.getenv('GIT_SHA', None),
 }
-SENTRY_DSN_PUBLIC = '''{{template "KEY" "sentry_dsn_public"}}'''
+SENTRY_DSN_PUBLIC = '''{{template "KEY" "sentry/dsn_public"}}'''
 
 MUSICBRAINZ_HOSTNAME = '''{{template "KEY" "musicbrainz/hostname"}}'''
 MUSICBRAINZ_USERAGENT = '''{{template "KEY" "musicbrainz/useragent"}}'''
@@ -22,6 +26,7 @@ MUSICBRAINZ_CLIENT_SECRET = '''{{template "KEY" "musicbrainz/client_secret"}}'''
 {{if service "pgbouncer-master"}}
 {{with index (service "pgbouncer-master") 0}}
 SQLALCHEMY_DATABASE_URI = "postgresql://critiquebrainz:critiquebrainz@{{.Address}}:{{.Port}}/critiquebrainz_db"
+MB_DATABASE_URI = "postgresql://musicbrainz_ro@{{.Address}}:{{.Port}}/musicbrainz_db"
 {{end}}
 {{end}}
 
@@ -34,6 +39,9 @@ REDIS_PORT = {{.Port}}
 
 MBSPOTIFY_BASE_URI = '''{{template "KEY" "mbspotify_url"}}'''
 MBSPOTIFY_ACCESS_KEY = '''{{template "KEY" "mbspotify_key"}}'''
+
+SPOTIFY_CLIENT_ID = '''{{template "KEY" "spotify/client_id"}}'''
+SPOTIFY_CLIENT_SECRET = '''{{template "KEY" "spotify/client_secret"}}'''
 
 # List of MusicBrainz usernames of people that are allowed to access
 # admin section of the website. Usernames are case-sensetive!
